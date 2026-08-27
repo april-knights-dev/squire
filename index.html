@@ -44,6 +44,21 @@
   var f = document.getElementById('app');
   var d = document.getElementById('direct');
   d.href = f.src;
+  // GAS は sandbox の iframe の寸法を「読み込んだ時点の値」で固定する。ウィンドウを
+  // リサイズすると中身が欠けたまま追従しないので、落ち着いたところで読み直す。
+  // cross-origin なので中へサイズを伝える手段が無く、読み直すしかない。
+  var lastSize = window.innerWidth + 'x' + window.innerHeight;
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      var now = window.innerWidth + 'x' + window.innerHeight;
+      if (now === lastSize) { return; }
+      lastSize = now;
+      f.src = f.src;
+    }, 500);
+  });
+
   var loaded = false;
   f.addEventListener('load', function () { loaded = true; });
   setTimeout(function () {
