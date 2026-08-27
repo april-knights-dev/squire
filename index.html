@@ -7,33 +7,57 @@
 <meta name="googlebot" content="noindex, nofollow">
 <title>Squire</title>
 <!--
-  この URL は「社内で配る入口」。実体は Google Apps Script の Web アプリで、
-  ここからリダイレクトする。GAS の deployment ID は固定してあるので、
-  コードを更新してもこの URL とリダイレクト先はどちらも変わらない。
+  リダイレクトではなく全画面 iframe。
+  リダイレクトすると URL 欄が GAS の長い /exec に書き換わり、社内で配れる URL に
+  ならない。iframe にすることで URL 欄は https://april-knights-dev.github.io/squire/
+  のまま固定される。
 
-  2026-08-27: URL 欄を github.io のまま保つために全画面 iframe で包む案を実測したが、
-  撤回した。理由は3つ。
-    1. GAS を XFrameOptionsMode.ALLOWALL にすると sandbox が storage access を
-       ユーザー操作待ちにし、クリックするまで画面が真っ暗になる
-       （allow="storage-access" の委譲で一度は解決した）
-    2. それでも cross-origin では認証 cookie が third-party 扱いになり、
-       Chrome が iframe の応答を描画できず「壊れた画像」になる状態を再現した
-    3. GAS は sandbox の寸法を読み込み時に固定するため、ウィンドウをリサイズすると
-       画面が欠ける。追従させるには読み直しが必要で、繰り返すと GAS が応答しなくなる
-  よって URL 欄はリダイレクト後の GAS の URL になる。配る URL はこちらのままでよい。
+  必要な条件が2つあり、どちらも欠けると真っ暗になる:
+    1. GAS 側が setXFrameOptionsMode(ALLOWALL)
+    2. この iframe に allow="storage-access" を委譲する
+       ALLOWALL にすると GAS の sandbox は storage access をユーザー操作待ちにする。
+       委譲しないと「クリックするまで何も出ない」画面になる（実測）
 
-  地の色は DESIGN.md の --g0（暗色 #0B1B1F / 明色 #EDEFEC）。リダイレクトまでの一瞬に
-  白が出ないようにするためだけに置く。文言・図は置かない（認証前の画面）。
+  既知の制約: GAS は sandbox の寸法を読み込み時の値で固定するため、
+  ウィンドウを大きくすると余白が出る。読み直しで追従させようとすると GAS が
+  応答しなくなるので入れていない。再読み込みで直る。
+
+  地の色は DESIGN.md の --g0（暗色 #0B1B1F / 明色 #EDEFEC）。iframe の読み込み中に
+  白が一瞬出ないようにするためだけに置く。文言・図は置かない（認証前の画面）。
 -->
-<meta http-equiv="refresh" content="0; url=https://script.google.com/a/macros/april-knights.com/s/AKfycbzq5WHCLRO9QUnwS9Whv4nW8kkt69FYvCtJDDb9dLVY16xrx5T7DuWtSfKxxqbv8umZqg/exec">
 <style>
-  html, body { margin: 0; padding: 0; height: 100%; background: #0B1B1F; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0B1B1F; }
   @media (prefers-color-scheme: light) { html, body { background: #EDEFEC; } }
+  #app { display: block; width: 100%; height: 100%; border: 0; }
+  /* 開けなかったときの逃げ道。5秒後にだけ出す。既定では見えない */
+  #fallback {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: none; padding: 10px 16px;
+    font: 12px/1.4 -apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+    color: #6E9298; background: #0F2226; border-top: 1px solid #24444A;
+  }
+  @media (prefers-color-scheme: light) {
+    #fallback { color: #566561; background: #F7F8F6; border-top-color: #C2CCC6; }
+  }
+  #fallback a { color: inherit; }
 </style>
 </head>
 <body>
+<iframe id="app" title="Squire"
+  src="https://script.google.com/a/macros/april-knights.com/s/AKfycbzq5WHCLRO9QUnwS9Whv4nW8kkt69FYvCtJDDb9dLVY16xrx5T7DuWtSfKxxqbv8umZqg/exec"
+  allow="clipboard-write; storage-access"></iframe>
+<div id="fallback">表示されない場合は <a id="direct" href="#">こちら</a></div>
 <script>
-  location.replace("https://script.google.com/a/macros/april-knights.com/s/AKfycbzq5WHCLRO9QUnwS9Whv4nW8kkt69FYvCtJDDb9dLVY16xrx5T7DuWtSfKxxqbv8umZqg/exec");
+  // Google 未サインインだと accounts.google.com が枠内表示を拒否して真っ白になる。
+  // 判定は cross-origin では取れないので、時間で逃げ道だけ出す。
+  var f = document.getElementById('app');
+  var d = document.getElementById('direct');
+  d.href = f.src;
+  var loaded = false;
+  f.addEventListener('load', function () { loaded = true; });
+  setTimeout(function () {
+    if (!loaded) { document.getElementById('fallback').style.display = 'block'; }
+  }, 5000);
 </script>
 </body>
 </html>
