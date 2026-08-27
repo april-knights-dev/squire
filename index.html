@@ -44,19 +44,24 @@
   var f = document.getElementById('app');
   var d = document.getElementById('direct');
   d.href = f.src;
-  // GAS は sandbox の iframe の寸法を「読み込んだ時点の値」で固定する。ウィンドウを
-  // リサイズすると中身が欠けたまま追従しないので、落ち着いたところで読み直す。
-  // cross-origin なので中へサイズを伝える手段が無く、読み直すしかない。
-  var lastSize = window.innerWidth + 'x' + window.innerHeight;
+  // GAS は sandbox の iframe の寸法を「読み込んだ時点の値」で固定する。cross-origin なので
+  // 中へサイズを伝える手段が無い。縮める方向は中でスクロールになるだけで欠けないが、
+  // 広げる方向は地色の余白が出て操作できない領域が生まれるので、そのときだけ読み直す。
+  // 読み直しを連発すると GAS 側が応答しなくなるので、10秒に1回までに制限する。
+  var lastW = window.innerWidth;
+  var lastH = window.innerHeight;
+  var lastReload = Date.now();
   var resizeTimer;
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-      var now = window.innerWidth + 'x' + window.innerHeight;
-      if (now === lastSize) { return; }
-      lastSize = now;
+      var grew = window.innerWidth > lastW + 24 || window.innerHeight > lastH + 24;
+      lastW = window.innerWidth;
+      lastH = window.innerHeight;
+      if (!grew || Date.now() - lastReload < 10000) { return; }
+      lastReload = Date.now();
       f.src = f.src;
-    }, 500);
+    }, 1500);
   });
 
   var loaded = false;
